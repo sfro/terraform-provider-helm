@@ -16,6 +16,7 @@ import (
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/helmpath"
+	"helm.sh/helm/v3/pkg/registry"
 	"helm.sh/helm/v3/pkg/storage/driver"
 
 	// Import to initialize client auth plugins.
@@ -364,6 +365,13 @@ func (m *Meta) GetHelmConfiguration(namespace string) (*action.Configuration, er
 	defer m.Unlock()
 	debug("[INFO] GetHelmConfiguration start")
 	actionConfig := new(action.Configuration)
+
+	registryClient, err := registry.NewClient()
+	if err != nil {
+		return nil, err
+	}
+
+	actionConfig.RegistryClient = registryClient
 
 	kc, err := newKubeConfig(m.data, &namespace)
 	if err != nil {

@@ -469,18 +469,32 @@ func resourceReleaseCreate(ctx context.Context, d *schema.ResourceData, meta int
 	n := d.Get("namespace").(string)
 
 	debug("%s Getting helm configuration", logID)
+
 	actionConfig, err := m.GetHelmConfiguration(n)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	cpo, chartName, err := chartPathOptions(d, m)
+	client := action.NewInstall(actionConfig)
+
+	originalCpo, chartName, err := chartPathOptions(d, m)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
+	cpo := client.ChartPathOptions
+	cpo.CaFile = originalCpo.CaFile
+	cpo.CertFile = originalCpo.CertFile
+	cpo.KeyFile = originalCpo.KeyFile
+	cpo.Keyring = originalCpo.Keyring
+	cpo.RepoURL = originalCpo.RepoURL
+	cpo.Verify = originalCpo.Verify
+	cpo.Version = originalCpo.Version
+	cpo.Username = originalCpo.Username
+	cpo.Password = originalCpo.Password
+
 	debug("%s Getting chart", logID)
-	c, path, err := getChart(d, m, chartName, cpo)
+	c, path, err := getChart(d, m, chartName, &cpo)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -508,8 +522,6 @@ func resourceReleaseCreate(ctx context.Context, d *schema.ResourceData, meta int
 		return diag.FromErr(err)
 	}
 
-	client := action.NewInstall(actionConfig)
-	client.ChartPathOptions = *cpo
 	client.ClientOnly = false
 	client.DryRun = false
 	client.DisableHooks = d.Get("disable_webhooks").(bool)
